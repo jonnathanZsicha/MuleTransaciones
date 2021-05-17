@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="d45e8891-2db9-4ccd-8927-d65a789dd1dd" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="49bb119a-b0a7-455a-aa5b-7605b406bc6b" >
+		<db:generic-connection url="jdbc:postgresql://localhost:5432/CooperativaJep" driverClassName="org.postgresql.Driver" user="postgres" password="roott" />
+	</db:config>
+	<db:config name="Database_Config1" doc:name="Database Config" doc:id="3883b42e-817f-4afe-815b-948ef9b1e8f8" >
+		<db:generic-connection url="jdbc:postgresql://localhost:5432/CooperativaJep" driverClassName="org.postgresql.Driver" user="postgres" password="roott"/>
+	</db:config>
+	<flow name="transaccionesFlow1" doc:id="4ff7efcb-9f90-4481-a7d5-856713115fb5" >
+		<http:listener doc:name="Listener" doc:id="a5da4e0b-44ff-4415-89e1-8de677ea2570" config-ref="HTTP_Listener_config" path="/registro"/>
+		<logger level="INFO" doc:name="Logger" doc:id="36526c93-5e4f-4e83-9a5c-df9cc910fc1b" message="este es el mensaje"/>
+		<set-variable value="#[attributes.queryParams.Tipo]" doc:name="Set Variable" doc:id="88360e9b-0cba-476f-b3ba-c1ef5aaf999c" variableName="tipo"/>
+		<choice doc:name="Choice" doc:id="8affd45d-a723-41b5-bb40-af504548458f" >
+			<when expression="#[vars.tipo == 'Banco']">
+				<logger level="INFO" doc:name="Logger" doc:id="efbbfd2e-c8df-4a0f-9a98-eace006f9730" message="aqui entra en el banco"/>
+				<flow-ref doc:name="Banco" doc:id="b307e0e4-9f0e-4782-90e5-1fc9759e539d" name="listarPersonaJep"/>
+			</when>
+			<when expression="#[vars.tipo == 'Cooperativa']">
+				<logger level="INFO" doc:name="Logger" doc:id="d2f6b1e5-9a2a-40b6-a296-8354a2a9dc9f" message="Esta en la cooperativa"/>
+				<flow-ref doc:name="Flow Reference" doc:id="1aec46f3-af23-4d11-8fca-077a012b2a77" name="newPersonaJep"/>
+			</when>
+			<otherwise >
+				<logger level="INFO" doc:name="Logger" doc:id="65cdad66-7c7f-440e-81e5-b5ceff1ce4eb" message="aqui no se encuentra nada"/>
+			</otherwise>
+		</choice>
+	</flow>
+	<flow name="newPersonaJep" doc:id="80231cf2-6de9-42e8-a264-d73a2a004685" >
+		<http:listener doc:name="Listener" doc:id="a6f5e128-00ee-4efc-8bcb-3481a784dc00" config-ref="HTTP_Listener_config" path="/newPersonaJep" allowedMethods="POST"/>
+		<db:insert doc:name="Insert" doc:id="157805db-560f-40d5-b709-6fa6a64fbd50" config-ref="Database_Config1">
+			<db:sql ><![CDATA[insert into (id ,apellido,cedula,nombre,password,usuario) values (:id,:apellido,:cedula,:nombre:password,:usuario)]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	id:payload,
+	apellido:payload,
+	cedula:payload,
+	nombre:payload,
+	password:payload,
+	usuario:payload
+}]]]></db:input-parameters>
+		</db:insert>
+		<ee:transform doc:name="Transform Message" doc:id="45f2ccf2-bdda-4242-b923-926aa9170146" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+{
+	"Status":200,
+	"message":"Success"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="listarPersonaJep" doc:id="20c88bf4-2d78-435b-8ae0-6fe29be7732d" >
+		<http:listener doc:name="Listener" doc:id="c48b3e4d-1d73-4a8a-b153-272da656e536" config-ref="HTTP_Listener_config" path="/get"/>
+		<db:select doc:name="Select" doc:id="5fff6034-dc4a-4da7-b9d0-9dcd63e429d8" config-ref="Database_Config">
+			<db:sql ><![CDATA[select * from persona]]></db:sql>
+		</db:select>
+		<ee:transform doc:name="Transform Message" doc:id="2e2f915d-d72a-4aff-bb3d-fa58401eb91a" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>

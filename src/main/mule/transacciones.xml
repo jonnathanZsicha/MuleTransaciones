@@ -7,13 +7,16 @@ http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/htt
 http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
 http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
 	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="d45e8891-2db9-4ccd-8927-d65a789dd1dd" >
-		<http:listener-connection host="0.0.0.0" port="8081" />
+		<http:listener-connection host="localhost" port="8081" />
 	</http:listener-config>
 	<db:config name="Database_Config" doc:name="Database Config" doc:id="49bb119a-b0a7-455a-aa5b-7605b406bc6b" >
 		<db:generic-connection url="jdbc:postgresql://localhost:5432/CooperativaJep" driverClassName="org.postgresql.Driver" user="postgres" password="roott" />
 	</db:config>
 	<db:config name="Database_Config1" doc:name="Database Config" doc:id="3883b42e-817f-4afe-815b-948ef9b1e8f8" >
 		<db:generic-connection url="jdbc:postgresql://localhost:5432/CooperativaJep" driverClassName="org.postgresql.Driver" user="postgres" password="roott"/>
+	</db:config>
+	<db:config name="Database_Config2" doc:name="Database Config" doc:id="ce245cb0-7f94-401a-8dc0-ec3f3c072c99" >
+		<db:generic-connection url="jdbc:postgresql://localhost:5432/CooperativaJep" driverClassName="org.postgresql.Driver" user="postgres" password="roott" />
 	</db:config>
 	<flow name="transaccionesFlow1" doc:id="4ff7efcb-9f90-4481-a7d5-856713115fb5" >
 		<http:listener doc:name="Listener" doc:id="a5da4e0b-44ff-4415-89e1-8de677ea2570" config-ref="HTTP_Listener_config" path="/registro"/>
@@ -33,30 +36,40 @@ http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/
 			</otherwise>
 		</choice>
 	</flow>
+	<flow name="loginCooperativa" doc:id="e3ab041c-48b0-4037-a0f8-70f8d4f197ed" >
+		<http:listener doc:name="" doc:id="3f50a944-dec3-4b66-ab5e-b3077caf3113" config-ref="HTTP_Listener_config" path="/loginCooperativa"/>
+		<db:select doc:name="Select" doc:id="5d3ee714-9072-4474-a89c-265c7ace2e9d" config-ref="Database_Config2">
+			<db:sql ><![CDATA[select * from persona where usuario = :usuario and password =:password ]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+'usuario' : payload.usuario,
+'password' : payload.password
+}]]]></db:input-parameters>
+		</db:select>
+		<ee:transform doc:name="Transform Message" doc:id="d11c48e7-914e-4b5f-9446-7e5238324bfb" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
 	<flow name="newPersonaJep" doc:id="80231cf2-6de9-42e8-a264-d73a2a004685" >
 		<http:listener doc:name="Listener" doc:id="a6f5e128-00ee-4efc-8bcb-3481a784dc00" config-ref="HTTP_Listener_config" path="/newPersonaJep" allowedMethods="POST"/>
 		<db:insert doc:name="Insert" doc:id="157805db-560f-40d5-b709-6fa6a64fbd50" config-ref="Database_Config1">
-			<db:sql ><![CDATA[insert into (id ,apellido,cedula,nombre,password,usuario) values (:id,:apellido,:cedula,:nombre:password,:usuario)]]></db:sql>
+			<db:sql ><![CDATA[INSERT INTO persona (id,apellido,cedula,nombre,password,usuario)
+VALUES (:id,:apellido,:cedula,:nombre,:password,:usuario)]]></db:sql>
+			<db:parameter-types />
 			<db:input-parameters ><![CDATA[#[{
-	id:payload,
-	apellido:payload,
-	cedula:payload,
-	nombre:payload,
-	password:payload,
-	usuario:payload
+	'id' : payload.id,
+	'apellido' : payload.apellido,
+	'cedula' :payload.cedula,
+	'nombre' : payload.nombre,
+	'password' : payload.password,
+	'usuario' : payload.usuario
 }]]]></db:input-parameters>
 		</db:insert>
-		<ee:transform doc:name="Transform Message" doc:id="45f2ccf2-bdda-4242-b923-926aa9170146" >
-			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
-output application/java
----
-{
-	"Status":200,
-	"message":"Success"
-}]]></ee:set-payload>
-			</ee:message>
-		</ee:transform>
+		<set-payload value='#["Se agrego corectamentame la persona"]' doc:name="Set Payload" doc:id="845a80f4-bd51-4836-b443-825f6eba78b0" />
 	</flow>
 	<flow name="listarPersonaJep" doc:id="20c88bf4-2d78-435b-8ae0-6fe29be7732d" >
 		<http:listener doc:name="Listener" doc:id="c48b3e4d-1d73-4a8a-b153-272da656e536" config-ref="HTTP_Listener_config" path="/get"/>
